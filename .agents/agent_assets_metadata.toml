@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "F5xYRyVipaat0ANYjQOXX"
+uri = "file://artifacts/irw-traffic-ai/public/images/medan-map-dark.png"
+type = "image"
+title = "Dark futuristic city map of Medan"
+
+[[generated]]
+id = "AtEzMUdC8ReHHZH_iEbu9"
+uri = "file://artifacts/irw-traffic-ai/public/images/neural-bg.png"
+type = "image"
+title = "Abstract neural network data streams"

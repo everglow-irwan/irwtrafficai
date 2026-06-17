@@ -7,6 +7,7 @@ import Dashboard from "@/pages/Dashboard";
 import Chat from "@/pages/Chat";
 import Hotspots from "@/pages/Hotspots";
 import NotFound from "@/pages/not-found";
+import VideoTemplate from "@/components/video/VideoTemplate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,14 +20,19 @@ const queryClient = new QueryClient({
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/chat" component={Chat} />
-        <Route path="/hotspots" component={Hotspots} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <Route path="/video" component={VideoTemplate} />
+      <Route path="/:rest*">
+        <Layout>
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/chat" component={Chat} />
+            <Route path="/hotspots" component={Hotspots} />
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 
