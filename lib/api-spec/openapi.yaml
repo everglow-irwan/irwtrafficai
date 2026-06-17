@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: IrwTrafficAI - Pemantau Kemacetan Kota Medan
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: traffic
+    description: Traffic monitoring for Medan city
+  - name: ai
+    description: AI assistant for route guidance
 paths:
   /healthz:
     get:
@@ -24,6 +28,181 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /traffic/overview:
+    get:
+      operationId: getTrafficOverview
+      tags: [traffic]
+      summary: Get overall traffic overview for Medan
+      responses:
+        "200":
+          description: Traffic overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrafficOverview"
+
+  /traffic/segments:
+    get:
+      operationId: listTrafficSegments
+      tags: [traffic]
+      summary: List all road segments with congestion levels
+      responses:
+        "200":
+          description: List of road segments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrafficSegment"
+
+  /traffic/hotspots:
+    get:
+      operationId: getTrafficHotspots
+      tags: [traffic]
+      summary: Get severe congestion hotspots
+      responses:
+        "200":
+          description: Severe congestion points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrafficHotspot"
+
+  /traffic/stats:
+    get:
+      operationId: getTrafficStats
+      tags: [traffic]
+      summary: Get traffic statistics
+      responses:
+        "200":
+          description: Traffic statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrafficStats"
+
+  /ai/conversations:
+    get:
+      operationId: listConversations
+      tags: [ai]
+      summary: List all AI conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+    post:
+      operationId: createConversation
+      tags: [ai]
+      summary: Create a new conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConversationInput"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /ai/conversations/{id}:
+    get:
+      operationId: getConversation
+      tags: [ai]
+      summary: Get conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationWithMessages"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteConversation
+      tags: [ai]
+      summary: Delete a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /ai/conversations/{id}/messages:
+    get:
+      operationId: listMessages
+      tags: [ai]
+      summary: List messages in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [ai]
+      summary: Send a message and receive streaming AI response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "200":
+          description: SSE stream of AI response chunks
+          content:
+            text/event-stream: {}
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +213,213 @@ components:
       required:
         - status
 
+    TrafficOverview:
+      type: object
+      properties:
+        overallLevel:
+          type: string
+          enum: [lancar, sedang, padat, macet_total]
+        totalRoads:
+          type: integer
+        lancarCount:
+          type: integer
+        sedangCount:
+          type: integer
+        padatCount:
+          type: integer
+        macetCount:
+          type: integer
+        lastUpdated:
+          type: string
+          format: date-time
+        summary:
+          type: string
+      required:
+        - overallLevel
+        - totalRoads
+        - lancarCount
+        - sedangCount
+        - padatCount
+        - macetCount
+        - lastUpdated
+        - summary
+
+    TrafficSegment:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        level:
+          type: string
+          enum: [lancar, sedang, padat, macet_total]
+        speedKmh:
+          type: number
+        delayMinutes:
+          type: integer
+        lat:
+          type: number
+        lng:
+          type: number
+        lastUpdated:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - from
+        - to
+        - level
+        - speedKmh
+        - delayMinutes
+        - lat
+        - lng
+        - lastUpdated
+
+    TrafficHotspot:
+      type: object
+      properties:
+        id:
+          type: integer
+        location:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [sedang, parah, sangat_parah]
+        lat:
+          type: number
+        lng:
+          type: number
+        estimatedClearTime:
+          type: string
+        reportedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - location
+        - description
+        - severity
+        - lat
+        - lng
+        - estimatedClearTime
+        - reportedAt
+
+    TrafficStats:
+      type: object
+      properties:
+        totalSegments:
+          type: integer
+        percentageLancar:
+          type: number
+        percentageSedang:
+          type: number
+        percentagePadat:
+          type: number
+        percentageMacet:
+          type: number
+        worstArea:
+          type: string
+        bestRoute:
+          type: string
+        peakHour:
+          type: string
+        avgSpeedKmh:
+          type: number
+      required:
+        - totalSegments
+        - percentageLancar
+        - percentageSedang
+        - percentagePadat
+        - percentageMacet
+        - worstArea
+        - bestRoute
+        - peakHour
+        - avgSpeedKmh
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - createdAt
+
+    ConversationInput:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    ConversationWithMessages:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+      required:
+        - id
+        - title
+        - createdAt
+        - messages
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - role
+        - content
+        - createdAt
+
+    MessageInput:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
