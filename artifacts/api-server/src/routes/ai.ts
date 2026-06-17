@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { conversationsTable, messagesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { SendMessageBody, CreateConversationBody } from "@workspace/api-zod";
+import { fetchFlowSegment, fetchIncidents, speedToLevel } from "../services/tomtom.js";
 
 const router = Router();
 
@@ -16,7 +17,54 @@ function getOpenAIClient(): OpenAI {
   return new OpenAI({ baseURL, apiKey });
 }
 
-const TRAFFIC_SYSTEM_PROMPT = `Kamu adalah IrwTrafficAI — asisten AI cerdas khusus untuk memantau dan memandu lalu lintas Kota Medan, Indonesia.
+const ROAD_POINTS = [
+  { name: "Jl. Gatot Subroto",    lat: 3.5952, lng: 98.6722 },
+  { name: "Jl. Sisingamangaraja", lat: 3.5800, lng: 98.6700 },
+  { name: "Jl. Adam Malik",       lat: 3.6100, lng: 98.6800 },
+  { name: "Jl. Iskandar Muda",    lat: 3.5900, lng: 98.6600 },
+  { name: "Jl. Imam Bonjol",      lat: 3.5930, lng: 98.6810 },
+  { name: "Jl. Diponegoro",       lat: 3.6200, lng: 98.6900 },
+  { name: "Jl. HM Yamin",         lat: 3.5910, lng: 98.6780 },
+  { name: "Jl. Asia",             lat: 3.5990, lng: 98.6830 },
+  { name: "Ring Road Medan",      lat: 3.6050, lng: 98.6400 },
+];
+
+async function buildLiveSystemPrompt(): Promise<string> {
+  try {
+    const [flowResults, incidents] = await Promise.all([
+      Promise.allSettled(
+        ROAD_POINTS.map(async (road) => {
+          const flow = await fetchFlowSegment(road.lat, road.lng);
+          return { name: road.name, flow };
+        }),
+      ),
+      fetchIncidents(),
+    ]);
+
+    const macet: string[] = [];
+    const sedang: string[] = [];
+    const lancar: string[] = [];
+
+    for (const result of flowResults) {
+      if (result.status !== "fulfilled") continue;
+      const { name, flow } = result.value;
+      if (!flow) continue;
+      const level = speedToLevel(flow.currentSpeed, flow.freeFlowSpeed, flow.roadClosure);
+      const info = `${name} (${Math.round(flow.currentSpeed)} km/h)`;
+      if (level === "macet_total" || level === "padat") macet.push(info);
+      else if (level === "sedang") sedang.push(info);
+      else lancar.push(info);
+    }
+
+    const incidentLines = incidents
+      .sort((a, b) => b.severity - a.severity)
+      .slice(0, 3)
+      .map((i) => `- ${i.description} (keterlambatan ~${Math.round(i.delay / 60)} menit)`)
+      .join("\n");
+
+    const now = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+
+    return `Kamu adalah IrwTrafficAI — asisten AI cerdas khusus untuk memantau dan memandu lalu lintas Kota Medan, Indonesia.
 
 Tugasmu:
 1. Memberikan informasi tentang kondisi lalu lintas terkini di Kota Medan
@@ -25,10 +73,11 @@ Tugasmu:
 4. Menginformasikan titik-titik kemacetan parah
 5. Memberikan tips berkendara di Medan
 
-Konteks kondisi lalu lintas saat ini:
-- Kemacetan parah: Jl. Sisingamangaraja, Jl. Imam Bonjol, Jl. Asia
-- Arus sedang: Jl. Pemuda, Jl. HM Yamin, Jl. Jend. Sudirman
-- Lancar: Ring Road Medan, Jl. Iskandar Muda, Jl. Diponegoro, Jl. Letjend Suprapto
+DATA LALU LINTAS REAL-TIME (sumber: TomTom, diperbarui: ${now} WIB):
+${macet.length > 0 ? `- Kemacetan/Padat: ${macet.join(", ")}` : "- Tidak ada kemacetan parah saat ini"}
+${sedang.length > 0 ? `- Arus Sedang: ${sedang.join(", ")}` : ""}
+${lancar.length > 0 ? `- Lancar: ${lancar.join(", ")}` : ""}
+${incidentLines ? `\nInsiden terdeteksi:\n${incidentLines}` : ""}
 
 Rute alternatif populer di Medan:
 - Menuju pusat kota: Gunakan Jl. Iskandar Muda atau Ring Road lalu masuk via Jl. Gatot Subroto
@@ -36,7 +85,12 @@ Rute alternatif populer di Medan:
 - Menuju Bandara Kualanamu: Tol Belmera lebih cepat daripada jalan umum
 - Menuju Helvetia: Via Jl. Letjend Suprapto lebih lancar dari Ring Road bagian utara
 
+Selalu jawab dalam Bahasa Indonesia yang jelas dan informatif. Berikan rekomendasi yang spesifik dan praktis berdasarkan data real-time di atas.`;
+  } catch {
+    return `Kamu adalah IrwTrafficAI — asisten AI cerdas khusus untuk memantau dan memandu lalu lintas Kota Medan, Indonesia.
 Selalu jawab dalam Bahasa Indonesia yang jelas dan informatif. Berikan rekomendasi yang spesifik dan praktis.`;
+  }
+}
 
 router.get("/ai/conversations", async (req, res) => {
   const convos = await db
@@ -174,8 +228,10 @@ router.post("/ai/conversations/:id/messages", async (req, res) => {
     content: parsed.data.content,
   });
 
+  const systemPrompt = await buildLiveSystemPrompt();
+
   const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    { role: "system", content: TRAFFIC_SYSTEM_PROMPT },
+    { role: "system", content: systemPrompt },
     ...history.map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
