@@ -1,0 +1,52 @@
+{
+  "name": "IrwTrafficAI — Lalu Lintas Medan",
+  "short_name": "IrwTrafficAI",
+  "description": "Pemantauan lalu lintas real-time Kota Medan berbasis AI dan data TomTom.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0e1a",
+  "theme_color": "#00d4ff",
+  "categories": ["navigation", "utilities"],
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/opengraph.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Dashboard Pemantauan Lalu Lintas"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Peta",
+      "description": "Buka peta lalu lintas real-time",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tanya AI",
+      "short_name": "AI Chat",
+      "description": "Tanya asisten AI tentang rute",
+      "url": "/chat",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
