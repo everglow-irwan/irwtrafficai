@@ -42,18 +42,6 @@ jobs:
           else
             echo "Frozen install failed due to lockfile/config mismatch. Running pnpm install --no-frozen-lockfile..."
             pnpm install --no-frozen-lockfile
-
-            # Jika pnpm mengubah pnpm-lock.yaml, commit + push agar repo selalu konsisten.
-            if git status --porcelain | grep -q "pnpm-lock.yaml"; then
-              echo "pnpm-lock.yaml changed. Committing update from CI..."
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git add pnpm-lock.yaml
-              git commit -m "chore: update pnpm-lock.yaml (CI)" || echo "No changes to commit"
-              git push
-            else
-              echo "pnpm-lock.yaml not changed after install."
-            fi
           fi
 
       - name: Build web app
